@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">ToDo</string>
+
+    <string-array name="sortTypes">
+        <item>nazwy</item>
+        <item>daty</item>
+        <item>priorytetu</item>
+        <item>typ</item>
+    </string-array>
+    <string-array name="taskTypes">
+        <item>praca</item>
+        <item>uczelnia</item>
+        <item>zakupy</item>
+        <item>auto</item>
+    </string-array>
+</resources>
