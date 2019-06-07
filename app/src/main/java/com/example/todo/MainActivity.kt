@@ -1,7 +1,6 @@
 package com.example.todo
 
-import android.app.Activity
-import android.app.AlertDialog
+import android.app.*
 import android.content.Intent
 import android.os.AsyncTask
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +14,13 @@ import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.room.Room
 import kotlinx.android.synthetic.main.activity_main.*
+import android.app.ActivityManager
+import android.content.Context
+import android.content.Context.ACTIVITY_SERVICE
+import android.util.Log
+import androidx.core.content.ContextCompat.getSystemService
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,17 +31,44 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    lateinit var mServiceIntent : Intent
+    lateinit var mService : MyService
     private lateinit var taskAdapter: TaskAdapter
     private var sortType = "name"
     private lateinit var db: AppDatabase
+
+    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                Log.i("isMyServiceRunning?", true.toString() + "")
+                return true
+            }
+        }
+        Log.i("isMyServiceRunning?", false.toString() + "")
+        return false
+    }
+
+    override fun onDestroy() {
+        stopService(mServiceIntent)
+        Log.i("MainActivity", "onDestroy!")
+        super.onDestroy()
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        db = Room.databaseBuilder(this, AppDatabase::class.java, "task.db").build()
+        mService = MyService()
+        mServiceIntent = Intent(this, mService.javaClass)
 
+        if(!isMyServiceRunning(mService.javaClass)){
+            startService(mServiceIntent)
+        }
+
+        db = Room.databaseBuilder(this, AppDatabase::class.java, "task.db").build()
+        taskList.clear()
         AsyncTask.execute {
             for (task in db.taskDao().getAll()) {
                 taskList.add(task)
@@ -86,6 +119,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun itemClick(position: Int) {
+
         val task = taskList[position]
         AlertDialog.Builder(this).setPositiveButton("Tak") { _, _ ->
             Toast.makeText(this, "Usunięto \"${task.name}\"", Toast.LENGTH_SHORT).show()
@@ -122,7 +156,7 @@ class MainActivity : AppCompatActivity() {
                         val priority = data.getIntExtra("priority", 1)
                         val type = data.getStringExtra("type")
 
-                        val newTask = Task(name, date, priority, type)
+                        val newTask = Task(name, date, priority, type, false)
 
                         AsyncTask.execute {
                             db.taskDao().insertAll(newTask)

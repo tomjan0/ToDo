@@ -10,6 +10,7 @@ data class Task(
     @ColumnInfo(name = "date") var date: String,
     @ColumnInfo(name = "priority") var priority: Int,
     @ColumnInfo(name = "type") var type: String,
+    @ColumnInfo(name = "notfied") var notified: Boolean,
     @ColumnInfo(name = "id")
-    @PrimaryKey(autoGenerate = true) var id : Long = 0
+    @PrimaryKey(autoGenerate = true) var id: Long = 0
 )
