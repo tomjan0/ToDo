@@ -126,7 +126,7 @@ class MyService : Service() {
 
         end = true
 
-        val broadcastIntent = Intent(this, Restarter::class.java)
+        val broadcastIntent = Intent(this, NotificationPublisher::class.java)
         sendBroadcast(broadcastIntent)
     }
 

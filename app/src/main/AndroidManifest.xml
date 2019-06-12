@@ -24,10 +24,7 @@
         <activity android:name=".AddTaskActivity" />
 
         <receiver
-            android:name=".Restarter"
-            android:enabled="true"
-            android:exported="true"
-            android:label="RestartServiceWhenStopped">
+            android:name=".NotificationPublisher">
         </receiver>
     </application>
 

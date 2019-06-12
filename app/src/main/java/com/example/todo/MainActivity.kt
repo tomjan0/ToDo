@@ -16,10 +16,12 @@ import androidx.room.Room
 import kotlinx.android.synthetic.main.activity_main.*
 import android.app.ActivityManager
 import android.content.Context
-import android.content.Context.ACTIVITY_SERVICE
+import android.icu.util.Calendar
+import android.os.SystemClock
 import android.util.Log
-import androidx.core.content.ContextCompat.getSystemService
-
+import kotlinx.coroutines.delay
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class MainActivity : AppCompatActivity() {
@@ -27,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val REQUEST_NEW_TASK = 1
         val taskList = ArrayList<Task>()
-
+        var notification = Notification()
 
     }
 
@@ -37,21 +39,21 @@ class MainActivity : AppCompatActivity() {
     private var sortType = "name"
     private lateinit var db: AppDatabase
 
-    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                Log.i("isMyServiceRunning?", true.toString() + "")
-                return true
-            }
-        }
-        Log.i("isMyServiceRunning?", false.toString() + "")
-        return false
-    }
+//    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
+//        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+//        for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+//            if (serviceClass.name == service.service.className) {
+//                Log.i("isMyServiceRunning?", true.toString() + "")
+//                return true
+//            }
+//        }
+//        Log.i("isMyServiceRunning?", false.toString() + "")
+//        return false
+//    }
 
     override fun onDestroy() {
-        stopService(mServiceIntent)
-        Log.i("MainActivity", "onDestroy!")
+//        stopService(mServiceIntent)
+//        Log.i("MainActivity", "onDestroy!")
         super.onDestroy()
     }
 
@@ -60,12 +62,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mService = MyService()
-        mServiceIntent = Intent(this, mService.javaClass)
+//        mService = MyService()
+//        mServiceIntent = Intent(this, mService.javaClass)
 
-        if(!isMyServiceRunning(mService.javaClass)){
-            startService(mServiceIntent)
-        }
+//        if(!isMyServiceRunning(mService.javaClass)){
+//            startService(mServiceIntent)
+//        }
 
         db = Room.databaseBuilder(this, AppDatabase::class.java, "task.db").build()
         taskList.clear()
@@ -156,13 +158,47 @@ class MainActivity : AppCompatActivity() {
                         val priority = data.getIntExtra("priority", 1)
                         val type = data.getStringExtra("type")
 
-                        val newTask = Task(name, date, priority, type, false)
+                        val task = Task(name, date, priority, type, false)
 
-                        AsyncTask.execute {
-                            db.taskDao().insertAll(newTask)
+                        val CHANNEL_ID = "mojkanal"
+
+                        val data = "$name;$date;$priority;$type"
+
+                        val draw = when (task.type) {
+                            "praca" -> R.drawable.ic_work_black_24dp
+                            "uczelnia" -> R.drawable.ic_local_library_black_24dp
+                            "zakupy" -> R.drawable.ic_local_grocery_store_black_24dp
+                            "auto" -> R.drawable.ic_directions_car_black_24dp
+                            else -> R.drawable.notification_icon_background
                         }
 
-                        taskList.add(newTask)
+                        val channel = NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
+                        val notification = Notification.Builder(this, CHANNEL_ID)
+                            .setContentTitle("Przypomnienie - ${task.type}")
+                            .setContentText("${task.name} - to już dziś, nie zapomnij!")
+                            .setAutoCancel(true)
+                            .setSmallIcon(draw)
+                            .build()
+
+
+
+
+                        val notificationIntent = Intent(this, NotificationPublisher::class.java)
+                        notificationIntent.putExtra("notification-id", 1)
+                        notificationIntent.putExtra("notification", notification)
+                        notificationIntent.putExtra("data", data)
+                        val pendingIntent = PendingIntent.getBroadcast(this, 0 ,notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+                        val calendar = Calendar.getInstance()
+                        calendar.add(Calendar.SECOND, 5)
+                        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+
+                        AsyncTask.execute {
+                            db.taskDao().insertAll(task)
+                        }
+
+                        taskList.add(task)
                         sortTasks()
                     }
                     taskAdapter.notifyDataSetChanged()
